@@ -1,0 +1,49 @@
+avoided_data: ["password", "apikey", "token"]
+enabled_rules: 15
+enabled_funcs: [
+  {name: "log/slog.Log", msgPos: 2, argsPos: 3},
+  {name: "log/slog.LogAttrs", msgPos: 2, argsPos: 3},
+	{name: "log/slog.Debug", msgPos: 0, argsPos: 1},
+	{name: "log/slog.Info", msgPos: 0, argsPos: 1},
+	{name: "log/slog.Warn", msgPos: 0, argsPos: 1},
+	{name: "log/slog.Error", msgPos: 0, argsPos: 1},
+	{name: "log/slog.DebugContext", msgPos: 1, argsPos: 2},
+	{name: "log/slog.InfoContext", msgPos: 1, argsPos: 2},
+	{name: "log/slog.WarnContext", msgPos: 1, argsPos: 2},
+	{name: "log/slog.ErrorContext", msgPos: 1, argsPos: 2},
+
+	{name: "(*log/slog.Logger).Log", msgPos: 2, argsPos: 3},
+	{name: "(*log/slog.Logger).LogAttrs", msgPos: 2, argsPos: 3},
+	{name: "(*log/slog.Logger).Debug", msgPos: 0, argsPos: 1},
+	{name: "(*log/slog.Logger).Info", msgPos: 0, argsPos: 1},
+	{name: "(*log/slog.Logger).Warn", msgPos: 0, argsPos: 1},
+	{name: "(*log/slog.Logger).Error", msgPos: 0, argsPos: 1},
+	{name: "(*log/slog.Logger).DebugContext", msgPos: 1, argsPos: 2},
+	{name: "(*log/slog.Logger).InfoContext", msgPos: 1, argsPos: 2},
+	{name: "(*log/slog.Logger).WarnContext", msgPos: 1, argsPos: 2},
+	{name: "(*log/slog.Logger).ErrorContext", msgPos: 1, argsPos: 2},
+
+	{name: "(*go.uber.org/zap.Logger).Debug", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.Logger).Info", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.Logger).Warn", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.Logger).Error", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.Logger).Log", msgPos: 1, argsPos: 2},
+
+	{name: "(*go.uber.org/zap.SugaredLogger).Debug", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Info", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Warn", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Error", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Log", msgPos: 1, argsPos: 2},
+
+	{name: "(*go.uber.org/zap.SugaredLogger).Debugln", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Infoln", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Warnln", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Errorln", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Logln", msgPos: 1, argsPos: 2},
+
+	{name: "(*go.uber.org/zap.SugaredLogger).Debugw", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Infow", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Warnw", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Errorw", msgPos: 0, argsPos: 1},
+	{name: "(*go.uber.org/zap.SugaredLogger).Logw", msgPos: 1, argsPos: 2},
+]
