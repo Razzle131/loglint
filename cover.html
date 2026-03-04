@@ -1,0 +1,398 @@
+
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+		<title>cmd: Go Coverage Report</title>
+		<style>
+			body {
+				background: black;
+				color: rgb(80, 80, 80);
+			}
+			body, pre, #legend span {
+				font-family: Menlo, monospace;
+				font-weight: bold;
+			}
+			#topbar {
+				background: black;
+				position: fixed;
+				top: 0; left: 0; right: 0;
+				height: 42px;
+				border-bottom: 1px solid rgb(80, 80, 80);
+			}
+			#content {
+				margin-top: 50px;
+			}
+			#nav, #legend {
+				float: left;
+				margin-left: 10px;
+			}
+			#legend {
+				margin-top: 12px;
+			}
+			#nav {
+				margin-top: 10px;
+			}
+			#legend span {
+				margin: 0 5px;
+			}
+			.cov0 { color: rgb(192, 0, 0) }
+.cov1 { color: rgb(128, 128, 128) }
+.cov2 { color: rgb(116, 140, 131) }
+.cov3 { color: rgb(104, 152, 134) }
+.cov4 { color: rgb(92, 164, 137) }
+.cov5 { color: rgb(80, 176, 140) }
+.cov6 { color: rgb(68, 188, 143) }
+.cov7 { color: rgb(56, 200, 146) }
+.cov8 { color: rgb(44, 212, 149) }
+.cov9 { color: rgb(32, 224, 152) }
+.cov10 { color: rgb(20, 236, 155) }
+
+		</style>
+	</head>
+	<body>
+		<div id="topbar">
+			<div id="nav">
+				<select id="files">
+				
+				<option value="file0">github.com/Razzle131/loglint/cmd/main.go (0.0%)</option>
+				
+				<option value="file1">github.com/Razzle131/loglint/config/config.go (0.0%)</option>
+				
+				<option value="file2">github.com/Razzle131/loglint/logcheck/decorators.go (100.0%)</option>
+				
+				<option value="file3">github.com/Razzle131/loglint/logcheck/logcheck.go (90.2%)</option>
+				
+				</select>
+			</div>
+			<div id="legend">
+				<span>not tracked</span>
+			
+				<span class="cov0">no coverage</span>
+				<span class="cov1">low coverage</span>
+				<span class="cov2">*</span>
+				<span class="cov3">*</span>
+				<span class="cov4">*</span>
+				<span class="cov5">*</span>
+				<span class="cov6">*</span>
+				<span class="cov7">*</span>
+				<span class="cov8">*</span>
+				<span class="cov9">*</span>
+				<span class="cov10">high coverage</span>
+			
+			</div>
+		</div>
+		<div id="content">
+		
+		<pre class="file" id="file0" style="display: none">package main
+
+import (
+        "flag"
+
+        "github.com/Razzle131/loglint/config"
+        "github.com/Razzle131/loglint/logcheck"
+        _ "go.uber.org/zap"
+        "golang.org/x/tools/go/analysis/singlechecker"
+)
+
+func main() <span class="cov0" title="0">{
+        var configPath string
+        flag.StringVar(&amp;configPath, "config", "config.yaml", "linter configuration file")
+        flag.Parse()
+        cfg := config.Load(configPath)
+
+        analyzer := logcheck.New(cfg)
+        singlechecker.Main(analyzer)
+}</span>
+</pre>
+		
+		<pre class="file" id="file1" style="display: none">package config
+
+import (
+        "github.com/ilyakaznacheev/cleanenv"
+)
+
+// Func describes a function to analyze, e.g. [slog.Info].
+type Func struct {
+        Name   string `yaml:"name"`   // full function name (example: (*log/slog.Logger).Info)
+        MsgPos int    `yaml:"msgPos"` // position of msg argument starting from 0
+        ArgPos int    `yaml:"argPos"` // The position of the "args ...any" argument starting from 0
+}
+
+type Config struct {
+        EnabledRules int      `yaml:"enabled_rules" env:"ENABLED_RULES"` // bit mask for rules on/off (example: 1101=13 rule 2 is turned off)
+        AvoidedData  []string `yaml:"avoided_data" env:"AVOIDED_DATA"`   // slice of avoided names, lowercase only
+        EnabledFuncs []Func   `yaml:"enabled_funcs"`                     // slice of func definitions that linter searches for
+}
+
+var defaultConfig = Config{
+        EnabledRules: 15,
+        AvoidedData:  []string{"password", "apikey", "token"},
+        EnabledFuncs: []Func{
+                {Name: "log/slog.LogAttrs", MsgPos: 2, ArgPos: 3},
+                {Name: "log/slog.Debug", MsgPos: 0, ArgPos: 1},
+                {Name: "log/slog.Info", MsgPos: 0, ArgPos: 1},
+                {Name: "log/slog.Warn", MsgPos: 0, ArgPos: 1},
+                {Name: "log/slog.Error", MsgPos: 0, ArgPos: 1},
+        },
+}
+
+func Load(configPath string) Config <span class="cov0" title="0">{
+        var cfg Config
+        if err := cleanenv.ReadConfig(configPath, &amp;cfg); err != nil </span><span class="cov0" title="0">{
+                return defaultConfig
+        }</span>
+
+        <span class="cov0" title="0">return cfg</span>
+}
+</pre>
+		
+		<pre class="file" id="file2" style="display: none">package logcheck
+
+import (
+        "go/ast"
+)
+
+func withTypeCheck[T any](src ast.Expr, next func(T) []error) []error <span class="cov10" title="228">{
+        checked, ok := src.(T)
+        if !ok </span><span class="cov9" title="149">{
+                return []error{}
+        }</span>
+
+        <span class="cov8" title="79">return next(checked)</span>
+}
+</pre>
+		
+		<pre class="file" id="file3" style="display: none">package logcheck
+
+import (
+        "bytes"
+        "errors"
+        "go/ast"
+        "go/printer"
+        "go/token"
+        "slices"
+        "strings"
+        "unicode"
+
+        "github.com/Razzle131/loglint/config"
+        "golang.org/x/tools/go/analysis"
+        "golang.org/x/tools/go/analysis/passes/inspect"
+        "golang.org/x/tools/go/ast/inspector"
+        "golang.org/x/tools/go/types/typeutil"
+)
+
+var (
+        analyzer     *analysis.Analyzer
+        funcs        []config.Func
+        avoidedData  []string
+        enabledRules int
+)
+
+func New(cfg config.Config) *analysis.Analyzer <span class="cov3" title="5">{
+        funcs = cfg.EnabledFuncs
+        avoidedData = cfg.AvoidedData
+        enabledRules = cfg.EnabledRules
+
+        analyzer = &amp;analysis.Analyzer{
+                Name:     "loglint",
+                Doc:      "checks logging calls",
+                Run:      run,
+                Requires: []*analysis.Analyzer{inspect.Analyzer},
+        }
+
+        return analyzer
+}</span>
+
+func run(pass *analysis.Pass) (interface{}, error) <span class="cov1" title="1">{
+        inspector, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
+        if !ok </span><span class="cov0" title="0">{
+                panic("failed to obtain inspector")</span>
+        }
+
+        <span class="cov1" title="1">nodeFilter := []ast.Node{
+                (*ast.CallExpr)(nil),
+        }
+
+        inspector.Preorder(nodeFilter, func(n ast.Node) </span><span class="cov6" title="59">{
+                call, ok := n.(*ast.CallExpr)
+                if !ok </span><span class="cov0" title="0">{
+                        return
+                }</span>
+
+                <span class="cov6" title="59">fn := typeutil.StaticCallee(pass.TypesInfo, call)
+
+                idx := slices.IndexFunc(funcs, func(f config.Func) bool </span><span class="cov10" title="771">{
+                        return fn != nil &amp;&amp; f.Name == fn.FullName()
+                }</span>)
+                <span class="cov6" title="59">if idx == -1 </span><span class="cov4" title="12">{
+                        return
+                }</span>
+
+                <span class="cov6" title="47">msg := call.Args[funcs[idx].MsgPos]
+                params := call.Args[funcs[idx].ArgPos:]
+
+                errs := checkArg(msg)
+                for _, param := range params </span><span class="cov4" title="13">{
+                        errs = append(errs, checkArg(param)...)
+                }</span>
+
+                <span class="cov6" title="47">for _, err := range errs </span><span class="cov5" title="39">{
+                        pass.Reportf(call.Pos(), err.Error()+": %q",
+                                render(pass.Fset, call))
+                }</span>
+        })
+
+        <span class="cov1" title="1">return nil, nil</span>
+}
+
+func checkArg(expr ast.Expr) []error <span class="cov6" title="60">{
+        res := []error{}
+
+        res = append(res, withTypeCheck(expr, checkLiteral)...)
+        res = append(res, withTypeCheck(expr, checkIdent)...)
+        res = append(res, withTypeCheck(expr, checkBinaryExpression)...)
+
+        return res
+}</span>
+
+func checkLiteral(literal *ast.BasicLit) []error <span class="cov5" title="39">{
+        if len(literal.Value) &lt; 2 </span><span class="cov0" title="0">{
+                return []error{}
+        }</span>
+
+        <span class="cov5" title="39">msg := literal.Value[1 : len(literal.Value)-1] // remove quotes
+        checks := []error{checkFirstLetterCase(msg), checkEnglish(msg), checkSpecialSymbols(msg)}
+
+        res := []error{}
+        for _, err := range checks </span><span class="cov7" title="117">{
+                if err == nil </span><span class="cov7" title="106">{
+                        continue</span>
+                }
+                <span class="cov4" title="11">res = append(res, err)</span>
+        }
+
+        <span class="cov5" title="39">return res</span>
+}
+
+func checkIdent(ident *ast.Ident) []error <span class="cov5" title="33">{
+        if err := checkSensetive(ident.Name); err != nil </span><span class="cov5" title="28">{
+                return []error{err}
+        }</span>
+
+        <span class="cov3" title="5">return []error{}</span>
+}
+
+func checkBinaryExpression(binaryExpr *ast.BinaryExpr) []error <span class="cov3" title="7">{
+        res := []error{}
+
+        expr := binaryExpr
+        for expr != nil </span><span class="cov4" title="12">{
+                res = append(res, withTypeCheck(expr.Y, checkLiteral)...)
+                res = append(res, withTypeCheck(expr.Y, checkIdent)...)
+
+                res = append(res, withTypeCheck(expr.X, checkLiteral)...)
+                res = append(res, withTypeCheck(expr.X, checkIdent)...)
+
+                expr, _ = expr.X.(*ast.BinaryExpr)
+        }</span>
+
+        <span class="cov3" title="7">return res</span>
+}
+
+func checkFirstLetterCase(s string) error <span class="cov6" title="45">{
+        if enabledRules&gt;&gt;0%2 == 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov6" title="45">if len(s) &lt; 1 </span><span class="cov1" title="2">{
+                return nil
+        }</span>
+
+        <span class="cov6" title="43">firstLetter := []rune(s)[0]
+        if unicode.IsLetter(firstLetter) &amp;&amp; !unicode.IsLower(firstLetter) </span><span class="cov3" title="5">{
+                return errors.New("first letter must be in lower case")
+        }</span>
+
+        <span class="cov5" title="38">return nil</span>
+}
+
+func checkEnglish(s string) error <span class="cov6" title="43">{
+        if enabledRules&gt;&gt;1%2 == 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov6" title="43">if strings.ContainsFunc(s, func(r rune) bool </span><span class="cov8" title="223">{
+                return r &gt; unicode.MaxLatin1 &amp;&amp; unicode.IsLetter(r)
+        }</span>) <span class="cov2" title="3">{
+                return errors.New("message must contain only english letters")
+        }</span>
+
+        <span class="cov5" title="40">return nil</span>
+}
+
+func checkSpecialSymbols(s string) error <span class="cov6" title="45">{
+        if enabledRules&gt;&gt;2%2 == 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov6" title="45">if strings.ContainsFunc(s, func(r rune) bool </span><span class="cov8" title="230">{
+                return !unicode.IsLetter(r) &amp;&amp; !unicode.IsDigit(r) &amp;&amp; r != ' '
+        }</span>) <span class="cov3" title="9">{
+                return errors.New("message must not contain special symbols")
+        }</span>
+
+        <span class="cov5" title="36">return nil</span>
+}
+
+func checkSensetive(s string) error <span class="cov5" title="36">{
+        if enabledRules&gt;&gt;3%2 == 0 </span><span class="cov0" title="0">{
+                return nil
+        }</span>
+
+        <span class="cov5" title="36">if slices.Contains(avoidedData, strings.ToLower(s)) </span><span class="cov5" title="29">{
+                return errors.New("must not log sensitive data")
+        }</span>
+
+        <span class="cov3" title="7">return nil</span>
+}
+
+func render(fset *token.FileSet, x any) string <span class="cov5" title="39">{
+        var buf bytes.Buffer
+        if err := printer.Fprint(&amp;buf, fset, x); err != nil </span><span class="cov0" title="0">{
+                panic(err)</span>
+        }
+        <span class="cov5" title="39">return buf.String()</span>
+}
+</pre>
+		
+		</div>
+	</body>
+	<script>
+	(function() {
+		var files = document.getElementById('files');
+		var visible;
+		files.addEventListener('change', onChange, false);
+		function select(part) {
+			if (visible)
+				visible.style.display = 'none';
+			visible = document.getElementById(part);
+			if (!visible)
+				return;
+			files.value = part;
+			visible.style.display = 'block';
+			location.hash = part;
+		}
+		function onChange() {
+			select(files.value);
+			window.scrollTo(0, 0);
+		}
+		if (location.hash != "") {
+			select(location.hash.substr(1));
+		}
+		if (!visible) {
+			select("file0");
+		}
+	})();
+	</script>
+</html>

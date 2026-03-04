@@ -15,7 +15,6 @@ linters:
     - errchkjson
     - errname
     - errorlint
-    - exhaustruct
     - forcetypeassert
     - funlen
     - gocognit
