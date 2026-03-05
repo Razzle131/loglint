@@ -7,19 +7,12 @@ unit:
 	go test -race -coverprofile cover.out $(shell go list ./...)
 	go tool cover -html cover.out -o cover.html
 
-TESTS = ./logcheck/testdata
+TESTS = ./logcheck/testdata/src
 test:
-	$(foreach file, $(wildcard $(TESTS)/*/*), echo $(file); go run ./cmd/main.go $(file); echo -------------------;)
-
-IMAGE_NAME = "test_docker"
-docker-build:
-	docker build -t $(IMAGE_NAME) .
-
-docker-run:
-	docker run -it --rm $(IMAGE_NAME)
+	$(foreach file, $(wildcard $(TESTS)/*), echo $(file); go run ./cmd/main.go $(file); echo -------------------;)
 
 plugin:
 	golangci-lint custom -v
 
-run-plugin: plugin
-	./custom-gcl run -v ./logcheck/testdata/src/slog
+plugin-run: plugin
+	./custom-gcl run -c ./.local.golangci.yml -v ./logcheck/testdata/src/slog ./logcheck/testdata/src/zap

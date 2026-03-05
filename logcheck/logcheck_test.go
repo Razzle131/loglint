@@ -205,8 +205,7 @@ func TestAll(t *testing.T) {
 		t.Fatalf("Failed to get wd: %s", err)
 	}
 
-	cfg := config.Load("../config.yaml")
-	analyzer := NewAnalyzer(cfg)
+	initEnv()
 
 	testdata := filepath.Join(wd, "testdata")
 	analysistest.Run(t, testdata, analyzer, "slog/")

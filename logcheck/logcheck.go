@@ -12,7 +12,6 @@ import (
 
 	"github.com/Razzle131/loglint/config"
 	"golang.org/x/tools/go/analysis"
-	"golang.org/x/tools/go/analysis/passes/inspect"
 	"golang.org/x/tools/go/types/typeutil"
 )
 
@@ -29,10 +28,9 @@ func NewAnalyzer(cfg config.Config) *analysis.Analyzer {
 	enabledRules = cfg.EnabledRules
 
 	analyzer = &analysis.Analyzer{
-		Name:     "loglint",
-		Doc:      "checks logging calls",
-		Run:      Run,
-		Requires: []*analysis.Analyzer{inspect.Analyzer},
+		Name: "loglint",
+		Doc:  "checks logging calls",
+		Run:  Run,
 	}
 
 	return analyzer

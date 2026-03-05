@@ -14,13 +14,17 @@ func init() {
 type Plugin struct {
 }
 
+type PluginSettings struct {
+	CfgPath string `json:"cfgPath"`
+}
+
 func New(settings any) (register.LinterPlugin, error) {
-	cfgPath, err := register.DecodeSettings[string](settings)
+	s, err := register.DecodeSettings[PluginSettings](settings)
 	if err != nil {
 		return nil, err
 	}
 
-	cfg := config.Load(cfgPath)
+	cfg := config.Load(s.CfgPath)
 	_ = logcheck.NewAnalyzer(cfg)
 
 	return &Plugin{}, nil
