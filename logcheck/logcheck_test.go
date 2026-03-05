@@ -12,7 +12,7 @@ import (
 
 func initEnv() {
 	cfg := config.Load("")
-	_ = New(cfg)
+	_ = NewAnalyzer(cfg)
 }
 
 func TestCheckFirstLetterCase(t *testing.T) {
@@ -206,7 +206,7 @@ func TestAll(t *testing.T) {
 	}
 
 	cfg := config.Load("../config.yaml")
-	analyzer := New(cfg)
+	analyzer := NewAnalyzer(cfg)
 
 	testdata := filepath.Join(wd, "testdata")
 	analysistest.Run(t, testdata, analyzer, "slog/")

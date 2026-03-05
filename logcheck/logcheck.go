@@ -13,7 +13,6 @@ import (
 	"github.com/Razzle131/loglint/config"
 	"golang.org/x/tools/go/analysis"
 	"golang.org/x/tools/go/analysis/passes/inspect"
-	"golang.org/x/tools/go/ast/inspector"
 	"golang.org/x/tools/go/types/typeutil"
 )
 
@@ -24,7 +23,7 @@ var (
 	enabledRules int
 )
 
-func New(cfg config.Config) *analysis.Analyzer {
+func NewAnalyzer(cfg config.Config) *analysis.Analyzer {
 	funcs = cfg.EnabledFuncs
 	avoidedData = cfg.AvoidedData
 	enabledRules = cfg.EnabledRules
@@ -32,51 +31,49 @@ func New(cfg config.Config) *analysis.Analyzer {
 	analyzer = &analysis.Analyzer{
 		Name:     "loglint",
 		Doc:      "checks logging calls",
-		Run:      run,
+		Run:      Run,
 		Requires: []*analysis.Analyzer{inspect.Analyzer},
 	}
 
 	return analyzer
 }
 
-func run(pass *analysis.Pass) (interface{}, error) {
-	inspector, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-	if !ok {
-		panic("failed to obtain inspector")
-	}
+func Run(pass *analysis.Pass) (interface{}, error) {
+	for _, file := range pass.Files {
+		ast.Inspect(file, func(n ast.Node) bool {
+			call, ok := n.(*ast.CallExpr)
+			if !ok {
+				return true
+			}
 
-	nodeFilter := []ast.Node{
-		(*ast.CallExpr)(nil),
-	}
+			fn := typeutil.StaticCallee(pass.TypesInfo, call)
+			if fn == nil {
+				return true
+			}
 
-	inspector.Preorder(nodeFilter, func(n ast.Node) {
-		call, ok := n.(*ast.CallExpr)
-		if !ok {
-			return
-		}
+			idx := slices.IndexFunc(funcs, func(f config.Func) bool {
+				return f.Name == fn.FullName()
+			})
+			if idx == -1 {
+				return true
+			}
 
-		fn := typeutil.StaticCallee(pass.TypesInfo, call)
+			msg := call.Args[funcs[idx].MsgPos]
+			params := call.Args[funcs[idx].ArgPos:]
 
-		idx := slices.IndexFunc(funcs, func(f config.Func) bool {
-			return fn != nil && f.Name == fn.FullName()
+			errs := checkArg(msg)
+			for _, param := range params {
+				errs = append(errs, checkArg(param)...)
+			}
+
+			for _, err := range errs {
+				pass.Reportf(call.Pos(), err.Error()+": %q",
+					render(pass.Fset, call))
+			}
+
+			return true
 		})
-		if idx == -1 {
-			return
-		}
-
-		msg := call.Args[funcs[idx].MsgPos]
-		params := call.Args[funcs[idx].ArgPos:]
-
-		errs := checkArg(msg)
-		for _, param := range params {
-			errs = append(errs, checkArg(param)...)
-		}
-
-		for _, err := range errs {
-			pass.Reportf(call.Pos(), err.Error()+": %q",
-				render(pass.Fset, call))
-		}
-	})
+	}
 
 	return nil, nil
 }
