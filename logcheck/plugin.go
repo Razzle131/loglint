@@ -17,10 +17,13 @@ func NewPlugin(settings any) (register.LinterPlugin, error) {
 	// The configuration type will be map[string]any or []interface, it depends on your configuration.
 	// You can use https://github.com/go-viper/mapstructure to convert map to struct.
 
-	_, err := register.DecodeSettings[config.Config](settings)
+	cfgPath, err := register.DecodeSettings[string](settings)
 	if err != nil {
 		return nil, err
 	}
+
+	cfg := config.Load(cfgPath)
+	_ = New(cfg)
 
 	return &Plugin{}, nil
 }
