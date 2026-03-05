@@ -1,0 +1,5 @@
+version: v2.10.1
+plugins:
+  - module: 'github.com/Razzle131/loglint'
+    import: 'github.com/Razzle131/loglint'
+    version: latest

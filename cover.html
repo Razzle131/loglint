@@ -61,7 +61,9 @@
 				
 				<option value="file2">github.com/Razzle131/loglint/logcheck/decorators.go (100.0%)</option>
 				
-				<option value="file3">github.com/Razzle131/loglint/logcheck/logcheck.go (90.2%)</option>
+				<option value="file3">github.com/Razzle131/loglint/logcheck/logcheck.go (91.5%)</option>
+				
+				<option value="file4">github.com/Razzle131/loglint/plugin.go (0.0%)</option>
 				
 				</select>
 			</div>
@@ -101,7 +103,7 @@ func main() <span class="cov0" title="0">{
         flag.Parse()
         cfg := config.Load(configPath)
 
-        analyzer := logcheck.New(cfg)
+        analyzer := logcheck.NewAnalyzer(cfg)
         singlechecker.Main(analyzer)
 }</span>
 </pre>
@@ -125,11 +127,12 @@ type Config struct {
         EnabledFuncs []Func   `yaml:"enabled_funcs"`                     // slice of func definitions that linter searches for
 }
 
+const allRulesEnabledMask = 15
+
 var defaultConfig = Config{
-        EnabledRules: 15,
+        EnabledRules: allRulesEnabledMask,
         AvoidedData:  []string{"password", "apikey", "token"},
         EnabledFuncs: []Func{
-                {Name: "log/slog.LogAttrs", MsgPos: 2, ArgPos: 3},
                 {Name: "log/slog.Debug", MsgPos: 0, ArgPos: 1},
                 {Name: "log/slog.Info", MsgPos: 0, ArgPos: 1},
                 {Name: "log/slog.Warn", MsgPos: 0, ArgPos: 1},
@@ -178,7 +181,6 @@ import (
         "github.com/Razzle131/loglint/config"
         "golang.org/x/tools/go/analysis"
         "golang.org/x/tools/go/analysis/passes/inspect"
-        "golang.org/x/tools/go/ast/inspector"
         "golang.org/x/tools/go/types/typeutil"
 )
 
@@ -189,7 +191,7 @@ var (
         enabledRules int
 )
 
-func New(cfg config.Config) *analysis.Analyzer <span class="cov3" title="5">{
+func NewAnalyzer(cfg config.Config) *analysis.Analyzer <span class="cov3" title="5">{
         funcs = cfg.EnabledFuncs
         avoidedData = cfg.AvoidedData
         enabledRules = cfg.EnabledRules
@@ -197,51 +199,49 @@ func New(cfg config.Config) *analysis.Analyzer <span class="cov3" title="5">{
         analyzer = &amp;analysis.Analyzer{
                 Name:     "loglint",
                 Doc:      "checks logging calls",
-                Run:      run,
+                Run:      Run,
                 Requires: []*analysis.Analyzer{inspect.Analyzer},
         }
 
         return analyzer
 }</span>
 
-func run(pass *analysis.Pass) (interface{}, error) <span class="cov1" title="1">{
-        inspector, ok := pass.ResultOf[inspect.Analyzer].(*inspector.Inspector)
-        if !ok </span><span class="cov0" title="0">{
-                panic("failed to obtain inspector")</span>
+func Run(pass *analysis.Pass) (interface{}, error) <span class="cov1" title="1">{
+        for _, file := range pass.Files </span><span class="cov3" title="5">{
+                ast.Inspect(file, func(n ast.Node) bool </span><span class="cov10" title="918">{
+                        call, ok := n.(*ast.CallExpr)
+                        if !ok </span><span class="cov9" title="859">{
+                                return true
+                        }</span>
+
+                        <span class="cov6" title="59">fn := typeutil.StaticCallee(pass.TypesInfo, call)
+                        if fn == nil </span><span class="cov0" title="0">{
+                                return true
+                        }</span>
+
+                        <span class="cov6" title="59">idx := slices.IndexFunc(funcs, func(f config.Func) bool </span><span class="cov9" title="771">{
+                                return f.Name == fn.FullName()
+                        }</span>)
+                        <span class="cov6" title="59">if idx == -1 </span><span class="cov4" title="12">{
+                                return true
+                        }</span>
+
+                        <span class="cov6" title="47">msg := call.Args[funcs[idx].MsgPos]
+                        params := call.Args[funcs[idx].ArgPos:]
+
+                        errs := checkArg(msg)
+                        for _, param := range params </span><span class="cov4" title="13">{
+                                errs = append(errs, checkArg(param)...)
+                        }</span>
+
+                        <span class="cov6" title="47">for _, err := range errs </span><span class="cov5" title="39">{
+                                pass.Reportf(call.Pos(), err.Error()+": %q",
+                                        render(pass.Fset, call))
+                        }</span>
+
+                        <span class="cov6" title="47">return true</span>
+                })
         }
-
-        <span class="cov1" title="1">nodeFilter := []ast.Node{
-                (*ast.CallExpr)(nil),
-        }
-
-        inspector.Preorder(nodeFilter, func(n ast.Node) </span><span class="cov6" title="59">{
-                call, ok := n.(*ast.CallExpr)
-                if !ok </span><span class="cov0" title="0">{
-                        return
-                }</span>
-
-                <span class="cov6" title="59">fn := typeutil.StaticCallee(pass.TypesInfo, call)
-
-                idx := slices.IndexFunc(funcs, func(f config.Func) bool </span><span class="cov10" title="771">{
-                        return fn != nil &amp;&amp; f.Name == fn.FullName()
-                }</span>)
-                <span class="cov6" title="59">if idx == -1 </span><span class="cov4" title="12">{
-                        return
-                }</span>
-
-                <span class="cov6" title="47">msg := call.Args[funcs[idx].MsgPos]
-                params := call.Args[funcs[idx].ArgPos:]
-
-                errs := checkArg(msg)
-                for _, param := range params </span><span class="cov4" title="13">{
-                        errs = append(errs, checkArg(param)...)
-                }</span>
-
-                <span class="cov6" title="47">for _, err := range errs </span><span class="cov5" title="39">{
-                        pass.Reportf(call.Pos(), err.Error()+": %q",
-                                render(pass.Fset, call))
-                }</span>
-        })
 
         <span class="cov1" title="1">return nil, nil</span>
 }
@@ -256,8 +256,10 @@ func checkArg(expr ast.Expr) []error <span class="cov6" title="60">{
         return res
 }</span>
 
+const stringMinLen = 2
+
 func checkLiteral(literal *ast.BasicLit) []error <span class="cov5" title="39">{
-        if len(literal.Value) &lt; 2 </span><span class="cov0" title="0">{
+        if len(literal.Value) &lt; stringMinLen </span><span class="cov0" title="0">{
                 return []error{}
         }</span>
 
@@ -309,7 +311,7 @@ func checkFirstLetterCase(s string) error <span class="cov6" title="45">{
                 return nil
         }</span>
 
-        <span class="cov6" title="43">firstLetter := []rune(s)[0]
+        <span class="cov5" title="43">firstLetter := []rune(s)[0]
         if unicode.IsLetter(firstLetter) &amp;&amp; !unicode.IsLower(firstLetter) </span><span class="cov3" title="5">{
                 return errors.New("first letter must be in lower case")
         }</span>
@@ -317,12 +319,12 @@ func checkFirstLetterCase(s string) error <span class="cov6" title="45">{
         <span class="cov5" title="38">return nil</span>
 }
 
-func checkEnglish(s string) error <span class="cov6" title="43">{
+func checkEnglish(s string) error <span class="cov5" title="43">{
         if enabledRules&gt;&gt;1%2 == 0 </span><span class="cov0" title="0">{
                 return nil
         }</span>
 
-        <span class="cov6" title="43">if strings.ContainsFunc(s, func(r rune) bool </span><span class="cov8" title="223">{
+        <span class="cov5" title="43">if strings.ContainsFunc(s, func(r rune) bool </span><span class="cov8" title="223">{
                 return r &gt; unicode.MaxLatin1 &amp;&amp; unicode.IsLetter(r)
         }</span>) <span class="cov2" title="3">{
                 return errors.New("message must contain only english letters")
@@ -364,6 +366,57 @@ func render(fset *token.FileSet, x any) string <span class="cov5" title="39">{
         }
         <span class="cov5" title="39">return buf.String()</span>
 }
+</pre>
+		
+		<pre class="file" id="file4" style="display: none">package plugin
+
+import (
+        "github.com/Razzle131/loglint/config"
+        "github.com/Razzle131/loglint/logcheck"
+        "github.com/golangci/plugin-module-register/register"
+        "golang.org/x/tools/go/analysis"
+)
+
+func init() <span class="cov0" title="0">{
+        register.Plugin("loglint", New)
+}</span>
+
+type Plugin struct {
+}
+
+type PluginSettings struct {
+        CfgPath string `json:"cfgPath"`
+}
+
+func New(settings any) (register.LinterPlugin, error) <span class="cov0" title="0">{
+        s, err := register.DecodeSettings[PluginSettings](settings)
+        if err != nil </span><span class="cov0" title="0">{
+                return nil, err
+        }</span>
+
+        <span class="cov0" title="0">cfg := config.Load(s.CfgPath)
+        _ = logcheck.NewAnalyzer(cfg)
+
+        return &amp;Plugin{}, nil</span>
+}
+
+func (f *Plugin) BuildAnalyzers() ([]*analysis.Analyzer, error) <span class="cov0" title="0">{
+        return []*analysis.Analyzer{
+                {
+                        Name: "loglint",
+                        Doc:  "checks logging calls",
+                        Run:  f.run,
+                },
+        }, nil
+}</span>
+
+func (f *Plugin) GetLoadMode() string <span class="cov0" title="0">{
+        return register.LoadModeTypesInfo
+}</span>
+
+func (f *Plugin) run(pass *analysis.Pass) (any, error) <span class="cov0" title="0">{
+        return logcheck.Run(pass)
+}</span>
 </pre>
 		
 		</div>
