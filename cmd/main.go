@@ -15,6 +15,6 @@ func main() {
 	flag.Parse()
 	cfg := config.Load(configPath)
 
-	analyzer := logcheck.New(cfg)
+	analyzer := logcheck.NewAnalyzer(cfg)
 	singlechecker.Main(analyzer)
 }

@@ -17,3 +17,9 @@ docker-build:
 
 docker-run:
 	docker run -it --rm $(IMAGE_NAME)
+
+plugin:
+	golangci-lint custom -v
+
+run-plugin: plugin
+	./custom-gcl run -v ./logcheck/testdata/src/slog
